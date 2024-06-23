@@ -139,12 +139,12 @@
   margin-right: 0; /* Remove right margin for the last column */
 }
 
-.task-column.today {
+.task-column {
   background-color: #e0f7fa;
 }
 
 .task-column.this-week {
-  background-color: #e8f5e9;
+  background-color: #6bff77;
 }
 
 .task-column.this-month-year {
