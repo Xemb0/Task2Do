@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Home.css';
 import PersonIcon from '@mui/icons-material/Person';
@@ -15,8 +15,7 @@ import AddIcon from '@mui/icons-material/Add';
 import TaskModal from './TaskModal';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import DoneIcon from '@mui/icons-material/Done';
-import CloseIcon from '@mui/icons-material/Close';
+import axios from 'axios';
 
 const Home = () => {
   const [showNames, setShowNames] = useState(true);
@@ -38,28 +37,80 @@ const Home = () => {
   };
 
   const addTask = (newTask) => {
-    setTasks((prevTasks) => ({
-      ...prevTasks,
-      [taskCategory]: [...prevTasks[taskCategory], newTask],
-    }));
+    axios.post('http://localhost:3001/add', newTask)
+      .then(response => {
+        const savedTask = response.data;
+        setTasks((prevTasks) => ({
+          ...prevTasks,
+          [taskCategory]: [...prevTasks[taskCategory], savedTask],
+        }));
+        setShowModal(false);
+      })
+      .catch(error => console.error('Error adding task:', error));
   };
 
   const deleteTask = (category, taskId) => {
-    const updatedTasks = tasks[category].filter((task) => task.id !== taskId);
-    setTasks((prevTasks) => ({
-      ...prevTasks,
-      [category]: updatedTasks,
-    }));
+    axios.delete(`http://localhost:3001/delete/${taskId}`)
+      .then(() => {
+        const updatedTasks = tasks[category].filter((task) => task.id !== taskId);
+        setTasks((prevTasks) => ({
+          ...prevTasks,
+          [category]: updatedTasks,
+        }));
+      })
+      .catch(error => console.error('Error deleting task:', error));
   };
 
   const editTask = (category, updatedTask) => {
-    const updatedTasks = tasks[category].map((task) =>
-      task.id === updatedTask.id ? updatedTask : task
-    );
-    setTasks((prevTasks) => ({
-      ...prevTasks,
-      [category]: updatedTasks,
-    }));
+    axios.put(`http://localhost:3001/edit/${updatedTask.id}`, updatedTask)
+      .then(response => {
+        const updatedTasks = tasks[category].map((task) =>
+          task.id === updatedTask.id ? response.data : task
+        );
+        setTasks((prevTasks) => ({
+          ...prevTasks,
+          [category]: updatedTasks,
+        }));
+      })
+      .catch(error => console.error('Error editing task:', error));
+  };
+
+  useEffect(() => {
+    axios.get('http://localhost:3001/tasks')
+      .then(response => {
+        const tasks = response.data;
+        const today = tasks.filter(task => isToday(task.dueDate));
+        const week = tasks.filter(task => isThisWeek(task.dueDate));
+        const monthYear = tasks.filter(task => isThisMonthOrYear(task.dueDate));
+        setTasks({ today, week, monthYear });
+      })
+      .catch(error => console.error('Error fetching tasks:', error));
+  }, []);
+
+  const isToday = (dueDate) => {
+    const today = new Date();
+    const taskDate = new Date(dueDate);
+    return taskDate.toDateString() === today.toDateString();
+  };
+
+  const isThisWeek = (dueDate) => {
+    const today = new Date();
+    const taskDate = new Date(dueDate);
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(today);
+    endOfWeek.setDate(today.getDate() - today.getDay() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    return taskDate >= startOfWeek && taskDate <= endOfWeek;
+  };
+
+  const isThisMonthOrYear = (dueDate) => {
+    const today = new Date();
+    const taskDate = new Date(dueDate);
+    return (taskDate.getMonth() === today.getMonth() && taskDate.getFullYear() === today.getFullYear()) || taskDate.getFullYear() === today.getFullYear();
   };
 
   return (
@@ -126,67 +177,55 @@ const Home = () => {
           <h2>Task-2Do</h2>
           <div className="user-panel">
             <SettingsIcon className="user-icon" />
-            <LogoutIcon className="user-icon" />
+            <LogoutIcon className="user-icon" to="/login" />
           </div>
         </div>
         <div className="task-columns">
-          <div className="task-column today">
-            <div className="add-task-button" onClick={() => handleAddTask('today')}>
-              <AddIcon className="add-icon" />
-              <span>Add Task</span>
-            </div>
+          <div className="task-column">
             <h3>Today</h3>
-            <div className="tasks">
-              {tasks.today.map((task) => (
-                <div className="task-item" key={task.id}>
-                  <div className="task-title">{task.title}</div>
-                  <div className="task-actions">
-                    <EditIcon className="task-action-icon" onClick={() => handleEditTask('today', task)} />
-                    <DeleteIcon className="task-action-icon" onClick={() => deleteTask('today', task.id)} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <button className="add-task-button" onClick={() => handleAddTask('today')}>
+              <AddIcon />
+            </button>
+            {tasks.today.map(task => (
+              <div className="task" key={task.id}>
+                <h4>{task.title}</h4>
+                <p>{task.description}</p>
+                <button onClick={() => editTask('today', task)}><EditIcon /></button>
+                <button onClick={() => deleteTask('today', task.id)}><DeleteIcon /></button>
+              </div>
+            ))}
           </div>
-          <div className="task-column this-week">
-            <div className="add-task-button" onClick={() => handleAddTask('week')}>
-              <AddIcon className="add-icon" />
-              <span>Add Task</span>
-            </div>
+          <div className="task-column">
             <h3>This Week</h3>
-            <div className="tasks">
-              {tasks.week.map((task) => (
-                <div className="task-item" key={task.id}>
-                  <div className="task-title">{task.title}</div>
-                  <div className="task-actions">
-                    <EditIcon className="task-action-icon" onClick={() => handleEditTask('week', task)} />
-                    <DeleteIcon className="task-action-icon" onClick={() => deleteTask('week', task.id)} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <button className="add-task-button" onClick={() => handleAddTask('week')}>
+              <AddIcon />
+            </button>
+            {tasks.week.map(task => (
+              <div className="task" key={task.id}>
+                <h4>{task.title}</h4>
+                <p>{task.description}</p>
+                <button onClick={() => editTask('week', task)}><EditIcon /></button>
+                <button onClick={() => deleteTask('week', task.id)}><DeleteIcon /></button>
+              </div>
+            ))}
           </div>
-          <div className="task-column this-month-year">
-            <div className="add-task-button" onClick={() => handleAddTask('monthYear')}>
-              <AddIcon className="add-icon" />
-              <span>Add Task</span>
-            </div>
+          <div className="task-column">
             <h3>This Month and This Year</h3>
-            <div className="tasks">
-              {tasks.monthYear.map((task) => (
-                <div className="task-item" key={task.id}>
-                  <div className="task-title">{task.title}</div>
-                  <div className="task-actions">
-                    <EditIcon className="task-action-icon" onClick={() => handleEditTask('monthYear', task)} />
-                    <DeleteIcon className="task-action-icon" onClick={() => deleteTask('monthYear', task.id)} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <button className="add-task-button" onClick={() => handleAddTask('monthYear')}>
+              <AddIcon />
+            </button>
+            {tasks.monthYear.map(task => (
+              <div className="task" key={task.id}>
+                <h4>{task.title}</h4>
+                <p>{task.description}</p>
+                <button onClick={() => editTask('monthYear', task)}><EditIcon /></button>
+                <button onClick={() => deleteTask('monthYear', task.id)}><DeleteIcon /></button>
+              </div>
+            ))}
           </div>
         </div>
-        <TaskModal showModal={showModal} closeModal={closeModal} addTask={addTask} editTask={editTask} />
       </div>
+      {showModal && <TaskModal onClose={closeModal} onSave={addTask} />}
     </div>
   );
 };

@@ -1,53 +1,39 @@
 import React, { useState } from 'react';
 import './TaskModal.css';
 
-const TaskModal = ({ showModal, closeModal, addTask }) => {
-  const [taskName, setTaskName] = useState('');
-  const [taskDescription, setTaskDescription] = useState('');
+const TaskModal = ({ onClose, onSave }) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
 
-  const handleSave = () => {
-    const newTask = {
-      title: taskName,
-      description: taskDescription,
-      dueDate: dueDate,
-      id: Date.now(), // Generate a unique ID for the task
-    };
-    addTask(newTask);
-    setTaskName('');
-    setTaskDescription('');
-    setDueDate('');
-    closeModal();
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const newTask = { title, description, dueDate: new Date(dueDate) };
+    onSave(newTask);
   };
 
-  if (!showModal) {
-    return null;
-  }
-
   return (
-    <div className="modal-overlay">
+    <div className="task-modal">
       <div className="modal-content">
-        <h2>Add New Task</h2>
-        <input
-          type="text"
-          placeholder="Task Name"
-          value={taskName}
-          onChange={(e) => setTaskName(e.target.value)}
-        />
-        <textarea
-          placeholder="Task Description"
-          value={taskDescription}
-          onChange={(e) => setTaskDescription(e.target.value)}
-        />
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-        />
-        <div className="modal-actions">
-          <button onClick={handleSave}>Save</button>
-          <button onClick={closeModal}>Cancel</button>
-        </div>
+        <h2>Add Task</h2>
+        <form onSubmit={handleSubmit}>
+          <label>
+            Title:
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          </label>
+          <label>
+            Description:
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)}></textarea>
+          </label>
+          <label>
+            Due Date:
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </label>
+          <div className="modal-actions">
+            <button type="button" onClick={onClose}>Cancel</button>
+            <button type="submit">Save</button>
+          </div>
+        </form>
       </div>
     </div>
   );
