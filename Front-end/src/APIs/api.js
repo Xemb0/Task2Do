@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = "https://backend-task2do-1.onrender.com/tasks";
+// Update API URL to point to your Express server, not MongoDB directly
+const API_URL = "http://localhost:5000/tasks";
 
 export const fetchTasks = async () => {
   try {
@@ -14,7 +15,6 @@ export const fetchTasks = async () => {
 export const addTask = async (task) => {
   try {
     const response = await axios.post(API_URL, task);
-    console.log("api",task);
     return response.data;
   } catch (error) {
     throw error;
